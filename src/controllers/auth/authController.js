@@ -98,6 +98,7 @@ export const sendOtp = async (req, res) => {
                 success: false,
             });
         }
+        console.log(response, 'responseresponseresponseresponse')
         let data = null
         successHandler(res, 200, 'OTP sent successfully to your email', data);
     } catch (error) {

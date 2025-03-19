@@ -19,12 +19,12 @@ const Otps = sequelize.define('Otps', {
     type: DataTypes.NUMBER,
     allowNull: false
   },
-  verified: {
+  is_verified: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
   },
-  expiredTime: {
+  expired_time: {
     type: DataTypes.DATE,
     allowNull: false,
   },
