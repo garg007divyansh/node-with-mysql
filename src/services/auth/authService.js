@@ -52,7 +52,6 @@ export const register = async (name, email, phone, password, roleId) => {
 };
 
 export const sendOtp = async (email) => {
-    console.log(email, 'eeeeee');
     try {
         let userData = await sequelize.query(`select * from users where email = ?`, {
             type: QueryTypes.SELECT,
@@ -61,9 +60,8 @@ export const sendOtp = async (email) => {
         if (userData.length === 0) {
             return { success: false, message: 'User not found' };
         }
-        
+
         const userId = userData[0].id;
-        const expiredTime = moment().utc().add(2, 'minutes').toDate();
         const otp = Math.floor(100000 + Math.random() * 900000);
 
         // Check if an unverified OTP already exists for the user
@@ -75,19 +73,19 @@ export const sendOtp = async (email) => {
         if (existingOtp.length > 0) {
             // Update the existing OTP record
             await sequelize.query(
-                `update otps set otp = ?, expired_time = ? where user_id = ? and is_verified = ?`,
+                `update otps set otp = ? where user_id = ? and is_verified = ?`,
                 {
                     type: QueryTypes.UPDATE,
-                    replacements: [otp, expiredTime, userId, false]
+                    replacements: [otp, userId, false]
                 }
             );
         } else {
             // Insert a new OTP record
             await sequelize.query(
-                `insert into otps (user_id, otp, is_verified, expired_time) values (?, ?, ?, ?)`,
+                `insert into otps (user_id, otp, is_verified) values (?, ?, ?)`,
                 {
                     type: QueryTypes.INSERT,
-                    replacements: [userId, otp, false, expiredTime]
+                    replacements: [userId, otp, false]
                 }
             );
         }
@@ -98,6 +96,47 @@ export const sendOtp = async (email) => {
         await sendMail(email, emailSubject, emailText);
 
         return { success: true };
+    } catch (error) {
+        throw new Error('Error sending OTP: ' + error.message);
+    }
+};
+
+export const verifyOtp = async (email, otp) => {
+    try {
+        let userData = await sequelize.query(`select * from users where email = ?`, {
+            type: QueryTypes.SELECT,
+            replacements: [email]
+        });
+        if (userData.length === 0) {
+            return { success: false, message: 'User not found' };
+        }
+        const userId = userData[0].id;
+        let otpData = await sequelize.query(`select * from otps where user_id = ? and is_verified = ?`, {
+            type: QueryTypes.SELECT,
+            replacements: [userId, false]
+        })
+        if (otpData.length === 0) {
+            return { success: false, message: 'OTP not found' };
+        } else if (otpData[0].otp !== otp) {
+            return { success: false, message: 'OTP Mismatched' };
+        } else if ((new Date() - new Date(otpData[0].expired_time)) > 2 * 60 * 1000) {
+            return { success: false, message: 'OTP Expired' };
+        } else {
+            await sequelize.query(`update otps set is_verified = ? where user_id = ?`, {
+                type: QueryTypes.UPDATE,
+                replacements: [true, userId]
+            });
+            const payload = {
+                id: userData[0].id,
+                name: userData[0].name,
+                email: userData[0].email,
+                phone: userData[0].phone,
+                roleId: userData[0].role_id,
+            };
+            const accessToken = generateAccessToken(payload);
+            const refreshToken = generateRefreshToken(payload);
+            return { userData, accessToken, refreshToken, success: true };
+        }
     } catch (error) {
         throw new Error('Error sending OTP: ' + error.message);
     }

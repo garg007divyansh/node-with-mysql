@@ -13,5 +13,6 @@ router.get('/getAllRoles', masterController.getAllRoles);
 router.post('/login', authController.loginUser);
 router.post('/register', authController.register);
 router.post('/sendOtp', authController.sendOtp);
+router.post('/verifyOtp', authController.verifyOtp);
 
 export default router;

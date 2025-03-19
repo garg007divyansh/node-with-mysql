@@ -98,13 +98,58 @@ export const sendOtp = async (req, res) => {
                 success: false,
             });
         }
-        console.log(response, 'responseresponseresponseresponse')
         let data = null
         successHandler(res, 200, 'OTP sent successfully to your email', data);
     } catch (error) {
         console.error('Error sending otp:', error.message);
         res.status(500).json({ 
             message: 'Error sending otp', 
+            status: false, 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
+export const verifyOtp = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        if (!email) {
+            return res.status(400).json({
+                message: 'Email is required',
+                status: false,
+                success: false,
+            });
+        }
+        if (!otp) {
+            return res.status(400).json({
+                message: 'OTP is required',
+                status: false,
+                success: false,
+            });
+        }
+        const response = await authService.verifyOtp(email, otp);
+        if (!response.success) {
+            return res.status(403).json({
+                message: response.message,
+                status: false,
+                success: false,
+            });
+        }
+        const data = {
+            id: response.userData[0].id,
+            name: response.userData[0].name,
+            email: response.userData[0].email,
+            phone: response.userData[0].phone,
+            roleId: response.userData[0].role_id,
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken
+        }
+        successHandler(res, 200, 'User logged in successfully', data);
+    } catch (error) {
+        console.error('Error verifing otp:', error.message);
+        res.status(500).json({ 
+            message: 'Error verifing otp', 
             status: false, 
             success: false, 
             error: error.message 
