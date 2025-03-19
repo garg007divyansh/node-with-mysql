@@ -14,5 +14,6 @@ router.post('/login', authController.loginUser);
 router.post('/register', authController.register);
 router.post('/sendOtp', authController.sendOtp);
 router.post('/verifyOtp', authController.verifyOtp);
+router.post('/refreshToken', authController.refreshAccessToken);
 
 export default router;

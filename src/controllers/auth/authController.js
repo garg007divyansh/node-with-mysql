@@ -156,3 +156,37 @@ export const verifyOtp = async (req, res) => {
         });
     }
 };
+
+export const refreshAccessToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) {
+            return res.status(400).json({
+                message: 'Refresh token is required',
+                status: false,
+                success: false,
+            });
+        }
+
+        const response = await authService.refreshAccessToken(refreshToken);
+        if (!response.success) {
+            return res.status(403).json({
+                message: response.message,
+                status: false,
+                success: false,
+            });
+        }
+        let data = {
+            accessToken: response.accessToken,
+        }
+        successHandler(res, 200, 'Access token refreshed successfully', data);
+    } catch (error) {
+        console.error('Error processing refresh token:', error.message);
+        res.status(500).json({ 
+            message: 'Error processing refresh token', 
+            status: false, 
+            success: false, 
+            error: error.message 
+        });
+    }
+};

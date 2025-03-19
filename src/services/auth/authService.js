@@ -1,7 +1,7 @@
 import sequelize from "../../loaders/connection.js";
 import { QueryTypes } from "sequelize";
 import bcrypt from 'bcryptjs';
-import { generateAccessToken, generateRefreshToken } from "../../utils/generateToken.js";
+import { generateAccessToken, generateRefreshToken, verifyToken } from "../../utils/generateToken.js";
 import moment from "moment";
 import { sendMail } from "../../utils/emailService.js";
 
@@ -119,8 +119,6 @@ export const verifyOtp = async (email, otp) => {
             return { success: false, message: 'OTP not found' };
         } else if (otpData[0].otp !== otp) {
             return { success: false, message: 'OTP Mismatched' };
-        } else if ((new Date() - new Date(otpData[0].expired_time)) > 2 * 60 * 1000) {
-            return { success: false, message: 'OTP Expired' };
         } else {
             await sequelize.query(`update otps set is_verified = ? where user_id = ?`, {
                 type: QueryTypes.UPDATE,
@@ -139,6 +137,36 @@ export const verifyOtp = async (email, otp) => {
         }
     } catch (error) {
         throw new Error('Error sending OTP: ' + error.message);
+    }
+};
+
+export const refreshAccessToken = async (refreshToken) => {
+    try {
+        // Verify the refresh token
+        const payload = verifyToken(refreshToken, process.env.JWT_SECRET_KEY);
+
+        if (!payload) {
+            return {
+                success: false,
+                message: 'Invalid or expired refresh token',
+            };
+        }
+
+        // Generate a new access token
+        const newAccessToken = generateAccessToken({
+            id: payload.id,
+            name: payload.name,
+            email: payload.email,
+            phone: payload.phone,
+            roleId: payload.roleId,
+        });
+
+        return {
+            success: true,
+            accessToken: newAccessToken,
+        };
+    } catch (error) {
+        throw new Error('Error processing refresh token: ' + error.message);
     }
 };
 
