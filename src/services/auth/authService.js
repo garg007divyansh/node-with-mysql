@@ -69,23 +69,23 @@ export const sendOtp = async (email) => {
             type: QueryTypes.SELECT,
             replacements: [userId, false]
         });
-
+        const expiredTime = moment().add(2, 'minutes').toDate();
         if (existingOtp.length > 0) {
             // Update the existing OTP record
             await sequelize.query(
-                `update otps set otp = ? where user_id = ? and is_verified = ?`,
+                `update otps set otp = ?, expired_time = ? where user_id = ? and is_verified = ?`,
                 {
                     type: QueryTypes.UPDATE,
-                    replacements: [otp, userId, false]
+                    replacements: [otp, expiredTime, userId, false]
                 }
             );
         } else {
             // Insert a new OTP record
             await sequelize.query(
-                `insert into otps (user_id, otp, is_verified) values (?, ?, ?)`,
+                `insert into otps (user_id, otp, is_verified, expired_time) values (?, ?, ?, ?)`,
                 {
                     type: QueryTypes.INSERT,
-                    replacements: [userId, otp, false]
+                    replacements: [userId, otp, false, expiredTime]
                 }
             );
         }
@@ -115,13 +115,14 @@ export const verifyOtp = async (email, otp) => {
             type: QueryTypes.SELECT,
             replacements: [userId, false]
         })
-        const expiredTime = moment(otpData?.[0]?.expired_time);
-        const currentTime = moment();
+        const expiredTime = moment.utc(otpData[0].expired_time).format('YYYY-MM-DD HH:mm:ss');
+        const currentTime = moment().format('YYYY-MM-DD HH:mm:ss');
+        
         if (otpData.length === 0) {
             return { success: false, message: 'OTP not found' };
         } else if (otpData[0].otp !== otp) {
             return { success: false, message: 'OTP Mismatched' };
-        } else if (currentTime.diff(expiredTime, 'minutes') > 2) {
+        } else if (moment(currentTime).isAfter(expiredTime)) {
             return { success: false, message: 'OTP Expired' };
         } else {
             await sequelize.query(`update otps set is_verified = ? where user_id = ?`, {
