@@ -115,10 +115,14 @@ export const verifyOtp = async (email, otp) => {
             type: QueryTypes.SELECT,
             replacements: [userId, false]
         })
+        const expiredTime = moment(otpData?.[0]?.expired_time);
+        const currentTime = moment();
         if (otpData.length === 0) {
             return { success: false, message: 'OTP not found' };
         } else if (otpData[0].otp !== otp) {
             return { success: false, message: 'OTP Mismatched' };
+        } else if (currentTime.diff(expiredTime, 'minutes') > 2) {
+            return { success: false, message: 'OTP Expired' };
         } else {
             await sequelize.query(`update otps set is_verified = ? where user_id = ?`, {
                 type: QueryTypes.UPDATE,
